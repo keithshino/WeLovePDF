@@ -9,12 +9,12 @@ import type { LoadedPdfFile, PageInProcessing } from '../types';
 const PdfPageThumbnail: React.FC<{ file: File, pageNumber: number }> = ({ file, pageNumber }) => {
     return (
         <div className="bg-white border border-slate-200 rounded-md shadow-sm overflow-hidden w-36 h-48 flex items-center justify-center">
-             <Document file={file} loading={<div className="w-full h-full bg-slate-100 animate-pulse" />}>
-                <Page 
-                    pageNumber={pageNumber} 
-                    width={144} 
+            <Document file={file} loading={<div className="w-full h-full bg-slate-100 animate-pulse" />}>
+                <Page
+                    pageNumber={pageNumber}
+                    width={144}
                     renderTextLayer={false}
-                    renderAnnotationLayer={false} 
+                    renderAnnotationLayer={false}
                 />
             </Document>
         </div>
@@ -60,7 +60,7 @@ const PdfSplitter: React.FC = () => {
             setIsProcessing(false);
         }
     }, []);
-    
+
     const togglePageSelection = (pageId: string) => {
         setSelectedPages(prev => {
             const newSet = new Set(prev);
@@ -72,7 +72,7 @@ const PdfSplitter: React.FC = () => {
             return newSet;
         });
     };
-    
+
     const deleteSelectedPages = () => {
         setPages(currentPages => currentPages.filter(p => !selectedPages.has(p.id)));
         setSelectedPages(new Set());
@@ -89,7 +89,7 @@ const PdfSplitter: React.FC = () => {
             const newPdf = await PDFDocument.create();
             const sourceBytes = await loadedFile.file.arrayBuffer();
             const sourcePdf = await PDFDocument.load(sourceBytes);
-            
+
             const pageIndicesToKeep = pages.map(p => p.originalPageIndex - 1);
             const copiedPages = await newPdf.copyPages(sourcePdf, pageIndicesToKeep);
             copiedPages.forEach(page => newPdf.addPage(page));
@@ -111,26 +111,26 @@ const PdfSplitter: React.FC = () => {
             setIsProcessing(false);
         }
     };
-    
+
     const resetState = () => {
-      setLoadedFile(null);
-      setPages([]);
-      setSelectedPages(new Set());
-      setError(null);
+        setLoadedFile(null);
+        setPages([]);
+        setSelectedPages(new Set());
+        setError(null);
     };
 
     return (
         <div className="w-full">
-            <h2 className="text-2xl font-bold text-center mb-1 text-slate-800">PDF Splitter / Delete Pages</h2>
+            <h2 className="text-2xl font-bold text-center mb-1 text-slate-800">PDFを分割するけんね</h2>
             <p className="text-center text-slate-500 mb-6">Select pages you want to delete from your PDF.</p>
-            
+
             {!loadedFile ? (
                 <div className="max-w-2xl mx-auto">
-                    <FileDropzone 
+                    <FileDropzone
                         onFilesAccepted={handleFileAccepted}
                         label="Select a PDF file to split"
                     />
-                     {isProcessing && !error && <div className="mt-4 flex justify-center"><Spinner /></div>}
+                    {isProcessing && !error && <div className="mt-4 flex justify-center"><Spinner /></div>}
                 </div>
             ) : (
                 <>
@@ -167,22 +167,22 @@ const PdfSplitter: React.FC = () => {
                             disabled={selectedPages.size === 0 || isProcessing}
                             className="w-full sm:w-auto bg-red-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-red-700 disabled:bg-red-300 transition-colors flex items-center justify-center space-x-2"
                         >
-                           <TrashIcon className="w-5 h-5"/><span>Delete Selected ({selectedPages.size})</span>
+                            <TrashIcon className="w-5 h-5" /><span>Delete Selected ({selectedPages.size})</span>
                         </button>
                         <button
                             onClick={handleCreatePdf}
                             disabled={isProcessing || pages.length === 0}
                             className="w-full sm:w-auto bg-blue-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-blue-700 disabled:bg-blue-300 transition-colors flex items-center justify-center space-x-2"
                         >
-                           {isProcessing ? <Spinner /> : <><DownloadIcon className="w-5 h-5"/><span>Create PDF ({pages.length} Pages)</span></>}
+                            {isProcessing ? <Spinner /> : <><DownloadIcon className="w-5 h-5" /><span>Create PDF ({pages.length} Pages)</span></>}
                         </button>
                     </div>
-                     <div className="text-center mt-4">
+                    <div className="text-center mt-4">
                         <button onClick={resetState} className="text-sm text-slate-500 hover:text-slate-700">Start Over</button>
                     </div>
                 </>
             )}
-             {error && <p className="text-red-500 text-center mt-4">{error}</p>}
+            {error && <p className="text-red-500 text-center mt-4">{error}</p>}
         </div>
     );
 };

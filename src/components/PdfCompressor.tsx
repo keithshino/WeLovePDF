@@ -43,7 +43,7 @@ const PdfCompressor: React.FC = () => {
     try {
       const arrayBuffer = await file.arrayBuffer();
       const pdfDoc = await PDFDocument.load(arrayBuffer);
-      
+
       const compressedBytes = await pdfDoc.save();
 
       const originalSize = file.size;
@@ -85,15 +85,15 @@ const PdfCompressor: React.FC = () => {
     setError(null);
     setIsProcessing(false);
   };
-  
+
   return (
     <div className="w-full max-w-2xl mx-auto">
       <div className="bg-white p-6 sm:p-8 rounded-lg shadow-md">
-        <h2 className="text-2xl font-bold text-center mb-1 text-slate-800">PDF Compressor</h2>
-        <p className="text-center text-slate-500 mb-6">Reduce the file size of your PDF while optimizing for quality.</p>
-        
+        <h2 className="text-2xl font-bold text-center mb-1 text-slate-800">PDFを圧縮するけんね</h2>
+        <p className="text-center text-slate-500 mb-6">クオリティは維持して圧縮するよ</p>
+
         {!file && (
-          <FileDropzone 
+          <FileDropzone
             onFilesAccepted={handleFileAccepted}
             label="Select a PDF file to compress"
           />
@@ -112,39 +112,39 @@ const PdfCompressor: React.FC = () => {
             >
               {isProcessing ? <Spinner /> : 'Compress PDF'}
             </button>
-             <button onClick={resetState} className="mt-4 text-sm text-slate-500 hover:text-slate-700">Choose a different file</button>
+            <button onClick={resetState} className="mt-4 text-sm text-slate-500 hover:text-slate-700">Choose a different file</button>
           </div>
         )}
-        
+
         {error && <p className="text-red-500 text-center mt-4">{error}</p>}
 
         {result && (
-           <div className="text-center transition-all duration-500 ease-in-out">
-             <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6 flex items-center justify-center space-x-3">
-              <CheckCircleIcon className="w-8 h-8 text-green-500"/>
+          <div className="text-center transition-all duration-500 ease-in-out">
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6 flex items-center justify-center space-x-3">
+              <CheckCircleIcon className="w-8 h-8 text-green-500" />
               <p className="font-semibold text-green-700 text-lg">Compression Successful!</p>
-             </div>
+            </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center mb-6">
-                <div>
-                    <p className="text-sm text-slate-500">Original Size</p>
-                    <p className="text-lg font-semibold">{formatBytes(result.originalSize)}</p>
-                </div>
-                <div>
-                    <p className="text-sm text-slate-500">New Size</p>
-                    <p className="text-lg font-semibold text-blue-600">{formatBytes(result.compressedSize)}</p>
-                </div>
-                <div>
-                    <p className="text-sm text-slate-500">Reduction</p>
-                    <p className="text-lg font-semibold text-green-600">{result.reduction.toFixed(1)}%</p>
-                </div>
+              <div>
+                <p className="text-sm text-slate-500">Original Size</p>
+                <p className="text-lg font-semibold">{formatBytes(result.originalSize)}</p>
+              </div>
+              <div>
+                <p className="text-sm text-slate-500">New Size</p>
+                <p className="text-lg font-semibold text-blue-600">{formatBytes(result.compressedSize)}</p>
+              </div>
+              <div>
+                <p className="text-sm text-slate-500">Reduction</p>
+                <p className="text-lg font-semibold text-green-600">{result.reduction.toFixed(1)}%</p>
+              </div>
             </div>
 
             <button
               onClick={downloadCompressedFile}
               className="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center space-x-2"
             >
-              <DownloadIcon className="w-5 h-5"/>
+              <DownloadIcon className="w-5 h-5" />
               <span>Download Compressed PDF</span>
             </button>
             <button onClick={resetState} className="mt-4 text-sm text-slate-500 hover:text-slate-700">Compress another file</button>
