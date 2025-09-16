@@ -116,7 +116,8 @@ const PdfMerger: React.FC = () => {
             }
 
             const mergedPdfBytes = await mergedPdf.save();
-            const blob = new Blob([mergedPdfBytes], { type: 'application/pdf' });
+            // const blob = new Blob([mergedPdfBytes.buffer], { type: 'application/pdf' });
+            const blob = new Blob([new Uint8Array(mergedPdfBytes)], { type: 'application/pdf' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
@@ -146,7 +147,7 @@ const PdfMerger: React.FC = () => {
 
     return (
         <div className="w-full">
-            <h2 className="text-2xl font-bold text-center mb-1 text-slate-800">PDFを結合するけんね</h2>
+            <h2 className="text-2xl font-bold text-center mb-1 text-slate-800">PDFを結合するけんね🌸</h2>
             <p className="text-center text-slate-500 mb-6">Combine PDFs. Drag and drop to reorder pages.</p>
 
             {pages.length === 0 ? (

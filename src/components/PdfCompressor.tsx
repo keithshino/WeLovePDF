@@ -17,6 +17,7 @@ const PdfCompressor: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [result, setResult] = useState<CompressionResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const handleFileAccepted = useCallback((files: File[]) => {
     setFile(files[0]);
@@ -58,6 +59,15 @@ const PdfCompressor: React.FC = () => {
         data: compressedBytes,
       });
 
+      const reaction =
+        reduction > 70 ? "🚀 爆速ばい！" :
+          reduction > 40 ? "🌟 いい感じ！" :
+            reduction > 10 ? "👍 まぁまぁやね！" :
+              "🤏 ちょっとだけ…";
+
+      const message = `圧縮率 ${reduction.toFixed(1)}%、${reaction}`;
+      setSuccessMessage(message);
+
     } catch (e) {
       console.error(e);
       setError('Failed to process the PDF. It might be corrupted or protected.');
@@ -84,12 +94,13 @@ const PdfCompressor: React.FC = () => {
     setResult(null);
     setError(null);
     setIsProcessing(false);
+    setSuccessMessage(null); // ← これ追加！
   };
 
   return (
     <div className="w-full max-w-2xl mx-auto">
       <div className="bg-white p-6 sm:p-8 rounded-lg shadow-md">
-        <h2 className="text-2xl font-bold text-center mb-1 text-slate-800">PDFを圧縮するけんね</h2>
+        <h2 className="text-2xl font-bold text-center mb-1 text-slate-800">PDFを圧縮するけんね🌸</h2>
         <p className="text-center text-slate-500 mb-6">クオリティは維持して圧縮するよ</p>
 
         {!file && (
@@ -120,9 +131,16 @@ const PdfCompressor: React.FC = () => {
 
         {result && (
           <div className="text-center transition-all duration-500 ease-in-out">
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6 flex items-center justify-center space-x-3">
-              <CheckCircleIcon className="w-8 h-8 text-green-500" />
-              <p className="font-semibold text-green-700 text-lg">Compression Successful!</p>
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+              <div className="flex items-center justify-center space-x-3 mb-2">
+                <CheckCircleIcon className="w-8 h-8 text-green-500" />
+                <p className="font-semibold text-green-700 text-lg">Compression Successful!</p>
+              </div>
+              {successMessage && (
+                <div className="bg-blue-100 border border-blue-200 text-blue-800 font-medium text-center py-3 px-4 rounded-lg shadow-sm">
+                  {successMessage}
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center mb-6">

@@ -95,7 +95,8 @@ const PdfSplitter: React.FC = () => {
             copiedPages.forEach(page => newPdf.addPage(page));
 
             const newPdfBytes = await newPdf.save();
-            const blob = new Blob([newPdfBytes], { type: 'application/pdf' });
+            // const blob = new Blob([newPdfBytes], { type: 'application/pdf' });
+            const blob = new Blob([new Uint8Array(newPdfBytes)], { type: 'application/pdf' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
@@ -121,7 +122,7 @@ const PdfSplitter: React.FC = () => {
 
     return (
         <div className="w-full">
-            <h2 className="text-2xl font-bold text-center mb-1 text-slate-800">PDFを分割するけんね</h2>
+            <h2 className="text-2xl font-bold text-center mb-1 text-slate-800">PDFを分割するけんね🌸</h2>
             <p className="text-center text-slate-500 mb-6">Select pages you want to delete from your PDF.</p>
 
             {!loadedFile ? (
