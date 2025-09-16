@@ -62,6 +62,9 @@ const App: React.FC = () => {
         </nav>
       </header>
       <main className="flex-grow container mx-auto p-4 sm:p-6 lg:p-8">
+        <div className="bg-green-500 text-white text-center py-4 rounded-lg shadow-md mb-4">
+          Tailwind は動いとるばい！🌸
+        </div>
         {renderTool()}
       </main>
       <footer className="text-center py-4 text-sm text-slate-500 bg-white border-t">

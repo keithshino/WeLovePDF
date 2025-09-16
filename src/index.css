@@ -1,0 +1,7 @@
+@import "tailwindcss";
+
+/* ↓古い方式はコメントアウトか削除
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+*/

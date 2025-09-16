@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
+import './index.css';
 import { pdfjs } from 'react-pdf';
 
 // Set up the PDF.js worker from a CDN. This is required for react-pdf.
