@@ -41,7 +41,7 @@ const App: React.FC = () => {
               </svg>
               <h1 className="text-2xl font-bold text-slate-800">WeLovePDF</h1>
             </div>
-            <a href="https://github.com/keithshino/WeLovePDF" target="_blank" rel="noopener noreferrer" className="text-slate-500 hover:text-slate-800" aria-label="Github Repository">
+            <a href="https://github.com/google-gemini/generative-ai-docs" target="_blank" rel="noopener noreferrer" className="text-slate-500 hover:text-slate-800" aria-label="Github Repository">
               <GithubIcon className="w-6 h-6" />
             </a>
           </div>
