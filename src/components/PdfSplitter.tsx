@@ -1,26 +1,16 @@
 import React, { useState, useCallback } from 'react';
 import { PDFDocument } from 'pdf-lib';
-import { Document, Page } from 'react-pdf';
+import { Document, Page, pdfjs } from 'react-pdf';
 import FileDropzone from './FileDropzone';
 import { DownloadIcon, TrashIcon } from './Icons';
 import Spinner from './Spinner';
 import type { LoadedPdfFile, PageInProcessing } from '../types';
 
-const PdfPageThumbnail: React.FC<{ file: File, pageNumber: number }> = ({ file, pageNumber }) => {
-    return (
-        <div className="bg-white border border-slate-200 rounded-md shadow-sm overflow-hidden w-36 h-48 flex items-center justify-center">
-            <Document file={file} loading={<div className="w-full h-full bg-slate-100 animate-pulse" />}>
-                <Page
-                    pageNumber={pageNumber}
-                    width={144}
-                    renderTextLayer={false}
-                    renderAnnotationLayer={false}
-                />
-            </Document>
-        </div>
-    );
+// 日本語対応のためのCMap設定
+const pdfOptions = {
+    cMapUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/cmaps/`,
+    cMapPacked: true,
 };
-
 
 const PdfSplitter: React.FC = () => {
     const [loadedFile, setLoadedFile] = useState<LoadedPdfFile | null>(null);
@@ -95,7 +85,9 @@ const PdfSplitter: React.FC = () => {
             copiedPages.forEach(page => newPdf.addPage(page));
 
             const newPdfBytes = await newPdf.save();
-            const blob = new Blob([newPdfBytes], { type: 'application/pdf' });
+            // カーソルの兄貴対応済みのBlob作成
+            const blob = new Blob([new Uint8Array(newPdfBytes)], { type: 'application/pdf' });
+            
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
@@ -121,7 +113,7 @@ const PdfSplitter: React.FC = () => {
 
     return (
         <div className="w-full">
-            <h2 className="text-2xl font-bold text-center mb-1 text-slate-800">PDFを分割するけんね</h2>
+            <h2 className="text-2xl font-bold text-center mb-1 text-slate-800">PDFを分割するけんね🌸</h2>
             <p className="text-center text-slate-500 mb-6">Select pages you want to delete from your PDF.</p>
 
             {!loadedFile ? (
@@ -135,23 +127,39 @@ const PdfSplitter: React.FC = () => {
             ) : (
                 <>
                     <div className="bg-white p-4 rounded-lg shadow-md mb-6">
-                        <div className="flex flex-wrap gap-4 justify-center">
+                        <Document
+                            file={loadedFile.file}
+                            options={pdfOptions}
+                            loading={<div className="text-center p-4">PDFを読み込み中...</div>}
+                            className="flex flex-wrap gap-4 justify-center"
+                        >
                             {pages.map((page) => (
                                 <div
                                     key={page.id}
-                                    className="relative group cursor-pointer"
+                                    className="relative group cursor-pointer w-36 h-48"
                                     onClick={() => togglePageSelection(page.id)}
                                 >
-                                    <div className={`transition-all rounded-lg overflow-hidden ${selectedPages.has(page.id) ? 'ring-4 ring-blue-500' : 'ring-2 ring-transparent'}`}>
-                                        <PdfPageThumbnail file={loadedFile.file} pageNumber={page.originalPageIndex} />
+                                    <div className={`w-full h-full bg-slate-100 border border-slate-200 rounded-md shadow-sm overflow-hidden flex items-center justify-center transition-all ${selectedPages.has(page.id) ? 'ring-4 ring-blue-500' : 'ring-2 ring-transparent'}`}>
+                                        <Page
+                                            pageNumber={page.originalPageIndex}
+                                            width={144}
+                                            renderTextLayer={false}
+                                            renderAnnotationLayer={false}
+                                            loading={<div className="w-full h-full bg-slate-100 animate-pulse" />}
+                                        />
                                     </div>
-                                    <div className={`absolute inset-0 bg-black transition-opacity ${selectedPages.has(page.id) ? 'bg-opacity-20' : 'bg-opacity-0'}`}></div>
+                                    
+                                    {/* ★修正ポイント：選択されている時だけ黒い膜を表示する！ */}
+                                    {selectedPages.has(page.id) && (
+                                        <div className="absolute inset-0 bg-black bg-opacity-20 rounded-md pointer-events-none"></div>
+                                    )}
+                                    
                                     <div className="absolute top-2 left-2">
                                         <input
                                             type="checkbox"
                                             checked={selectedPages.has(page.id)}
                                             readOnly
-                                            className="h-5 w-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                                            className="h-5 w-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                                         />
                                     </div>
                                     <div className="absolute bottom-1 right-1 bg-black bg-opacity-50 text-white text-xs px-1.5 py-0.5 rounded">
@@ -159,8 +167,9 @@ const PdfSplitter: React.FC = () => {
                                     </div>
                                 </div>
                             ))}
-                        </div>
+                        </Document>
                     </div>
+
                     <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                         <button
                             onClick={deleteSelectedPages}

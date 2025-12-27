@@ -4,8 +4,13 @@ import App from './App';
 import './index.css';
 import { pdfjs } from 'react-pdf';
 
-// Set up the PDF.js worker from a CDN. This is required for react-pdf.
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+// ↓↓↓ 【追加】これがないと、テキスト選択の位置がズレたりするけん、足しとこう！ ↓↓↓
+import 'react-pdf/dist/Page/AnnotationLayer.css';
+import 'react-pdf/dist/Page/TextLayer.css';
+
+// ↓↓↓ 【修正】ここを「https」から始まる確実なURLにする！ ↓↓↓
+// これでバージョン不一致も、http/httpsの混在エラーも全部防げる！
+pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
