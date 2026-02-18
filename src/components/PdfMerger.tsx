@@ -1,15 +1,45 @@
 import React, { useState, useCallback, useRef } from 'react';
 import { PDFDocument } from 'pdf-lib';
-import { Document, Page } from 'react-pdf';
+import { Document, Page, pdfjs } from 'react-pdf';
 import FileDropzone from './FileDropzone';
 import { DownloadIcon, XCircleIcon } from './Icons';
 import Spinner from './Spinner';
 import type { LoadedPdfFile, PageInProcessing } from '../types';
 
+// Worker設定
+if (!pdfjs.GlobalWorkerOptions.workerSrc) {
+    pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+}
+
+// 日本語対応のためのCMap設定
+const pdfOptions = {
+    cMapUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/cmaps/`,
+    cMapPacked: true,
+};
+
+// アイコンたち
+const EyeIcon = ({ className }: { className?: string }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+    </svg>
+);
+
+const XMarkIcon = ({ className }: { className?: string }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+    </svg>
+);
+
+// サムネイルコンポーネント
 const PdfPageThumbnail: React.FC<{ file: File, pageNumber: number }> = ({ file, pageNumber }) => {
     return (
         <div className="bg-white border border-slate-200 rounded-md shadow-sm overflow-hidden w-36 h-48 flex items-center justify-center">
-            <Document file={file} loading={<div className="w-full h-full bg-slate-100 animate-pulse" />}>
+            <Document 
+                file={file} 
+                loading={<div className="w-full h-full bg-slate-100 animate-pulse" />}
+                options={pdfOptions}
+            >
                 <Page
                     pageNumber={pageNumber}
                     width={144}
@@ -27,6 +57,9 @@ const PdfMerger: React.FC = () => {
     const [isProcessing, setIsProcessing] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
+    // 拡大プレビュー用のデータ管理
+    const [previewData, setPreviewData] = useState<{ file: File, pageNumber: number } | null>(null);
+
     const dragItem = useRef<number | null>(null);
     const dragOverItem = useRef<number | null>(null);
 
@@ -38,20 +71,21 @@ const PdfMerger: React.FC = () => {
         if (newFiles.length === 0) return;
 
         setIsProcessing(true);
-        const newLoadedFiles: LoadedPdfFile[] = [...loadedFiles];
-        const newPages: PageInProcessing[] = [...pages];
+        let currentLoadedFiles = [...loadedFiles];
+        let currentPages = [...pages];
 
         for (const file of newFiles) {
             try {
                 const arrayBuffer = await file.arrayBuffer();
                 const pdfDoc = await PDFDocument.load(arrayBuffer);
-                const fileId = `${file.name}-${Date.now()}`;
+                // ID生成（安全な書き方）
+                const fileId = file.name + '-' + Date.now();
 
-                newLoadedFiles.push({ id: fileId, file, pageCount: pdfDoc.getPageCount() });
+                currentLoadedFiles.push({ id: fileId, file, pageCount: pdfDoc.getPageCount() });
 
                 for (let i = 0; i < pdfDoc.getPageCount(); i++) {
-                    newPages.push({
-                        id: `${fileId}-page-${i}`,
+                    currentPages.push({
+                        id: fileId + '-page-' + i,
                         sourceFileId: fileId,
                         originalPageIndex: i + 1,
                     });
@@ -61,8 +95,8 @@ const PdfMerger: React.FC = () => {
                 setError(`Could not process ${file.name}. It may be corrupted or protected.`);
             }
         }
-        setLoadedFiles(newLoadedFiles);
-        setPages(newPages);
+        setLoadedFiles(currentLoadedFiles);
+        setPages(currentPages);
         setIsProcessing(false);
     }, [loadedFiles, pages]);
 
@@ -116,7 +150,7 @@ const PdfMerger: React.FC = () => {
             }
 
             const mergedPdfBytes = await mergedPdf.save();
-            const blob = new Blob([mergedPdfBytes], { type: 'application/pdf' });
+            const blob = new Blob([new Uint8Array(mergedPdfBytes)], { type: 'application/pdf' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
@@ -174,12 +208,38 @@ const PdfMerger: React.FC = () => {
                                         onDragOver={(e) => e.preventDefault()}
                                     >
                                         <PdfPageThumbnail file={file} pageNumber={page.originalPageIndex} />
-                                        <div className="absolute top-1 right-1">
-                                            <button onClick={() => removePage(page.id)} className="p-1 bg-black bg-opacity-50 rounded-full text-white opacity-0 group-hover:opacity-100 hover:bg-red-500 transition-opacity">
-                                                <XCircleIcon className="w-5 h-5" />
+                                        
+                                        {/* 🔴 削除ボタン（右上）: 赤色で「危険」をアピール！ */}
+                                        <div className="absolute top-1 right-1 z-10">
+                                            <button 
+                                                onClick={(e) => {
+                                                    e.stopPropagation(); // ドラッグ暴発防止
+                                                    removePage(page.id);
+                                                }}
+                                                className="p-1.5 bg-white text-red-500 rounded-full shadow-md opacity-0 group-hover:opacity-100 hover:bg-red-500 hover:text-white transition-all duration-200"
+                                                title="ページを削除"
+                                            >
+                                                <XCircleIcon className="w-6 h-6" />
                                             </button>
                                         </div>
-                                        <div className="absolute bottom-1 left-1 bg-black bg-opacity-50 text-white text-xs px-1.5 py-0.5 rounded">
+
+                                        {/* 🔵 プレビューボタン（中央）: ど真ん中で「見る」をアピール！ */}
+                                        <div className="absolute inset-0 flex items-center justify-center z-0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                                             <div className="pointer-events-auto">
+                                                <button 
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setPreviewData({ file, pageNumber: page.originalPageIndex });
+                                                    }}
+                                                    className="p-3 bg-blue-500 bg-opacity-90 text-white rounded-full shadow-lg hover:bg-blue-600 hover:scale-110 transition-all duration-200"
+                                                    title="拡大して確認"
+                                                >
+                                                    <EyeIcon className="w-8 h-8" />
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <div className="absolute bottom-1 right-1 bg-black bg-opacity-50 text-white text-xs px-1.5 py-0.5 rounded pointer-events-none">
                                             {index + 1}
                                         </div>
                                     </div>
@@ -207,6 +267,38 @@ const PdfMerger: React.FC = () => {
                 </>
             )}
             {error && <p className="text-red-500 text-center mt-4">{error}</p>}
+
+            {/* 拡大プレビュー用のモーダル */}
+            {previewData && (
+                <div 
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 p-4 backdrop-blur-sm"
+                    onClick={() => setPreviewData(null)}
+                >
+                    <div 
+                        className="bg-white rounded-lg shadow-2xl p-4 max-w-4xl max-h-[90vh] overflow-auto relative"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <button 
+                            onClick={() => setPreviewData(null)}
+                            className="absolute top-2 right-2 text-slate-500 hover:text-red-500 bg-slate-100 hover:bg-red-50 rounded-full p-2 transition-colors z-10"
+                        >
+                            <XMarkIcon className="w-6 h-6" />
+                        </button>
+                        
+                        <div className="flex justify-center">
+                            <Document file={previewData.file} options={pdfOptions}>
+                                <Page 
+                                    pageNumber={previewData.pageNumber} 
+                                    width={600} 
+                                    renderTextLayer={false}
+                                    renderAnnotationLayer={false}
+                                />
+                            </Document>
+                        </div>
+                        <p className="text-center mt-4 font-bold text-slate-700">Page {previewData.pageNumber}</p>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
