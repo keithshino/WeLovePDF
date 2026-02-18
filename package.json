@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "jszip": "^3.10.1",
     "pdf-lib": "^1.17.1",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
@@ -16,6 +17,7 @@
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.1.13",
+    "@types/jszip": "^3.4.0",
     "@types/node": "^22.14.0",
     "autoprefixer": "^10.4.21",
     "postcss": "^8.5.6",
