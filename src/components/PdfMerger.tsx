@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { PDFDocument } from 'pdf-lib';
 import { Document, Page, pdfjs } from 'react-pdf';
 import FileDropzone from './FileDropzone';
@@ -17,6 +17,10 @@ const pdfOptions = {
     cMapPacked: true,
 };
 
+interface PdfFileWithUrl extends LoadedPdfFile {
+    url: string;
+}
+
 // アイコンたち
 const EyeIcon = ({ className }: { className?: string }) => (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
@@ -31,12 +35,18 @@ const XMarkIcon = ({ className }: { className?: string }) => (
     </svg>
 );
 
-// サムネイルコンポーネント
-const PdfPageThumbnail: React.FC<{ file: File, pageNumber: number }> = ({ file, pageNumber }) => {
+const GripIcon = ({ className }: { className?: string }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 9h16.5m-16.5 6.75h16.5" />
+    </svg>
+);
+
+// ★ここが超重要！ React.memo で包んで、ドラッグ中の無駄な再描画（パニック）を防ぐ！
+const PdfPageThumbnail = React.memo(({ fileUrl, pageNumber }: { fileUrl: string, pageNumber: number }) => {
     return (
         <div className="bg-white border border-slate-200 rounded-md shadow-sm overflow-hidden w-36 h-48 flex items-center justify-center">
             <Document 
-                file={file} 
+                file={fileUrl} 
                 loading={<div className="w-full h-full bg-slate-100 animate-pulse" />}
                 options={pdfOptions}
             >
@@ -49,19 +59,24 @@ const PdfPageThumbnail: React.FC<{ file: File, pageNumber: number }> = ({ file, 
             </Document>
         </div>
     );
-};
+});
 
 const PdfMerger: React.FC = () => {
-    const [loadedFiles, setLoadedFiles] = useState<LoadedPdfFile[]>([]);
+    const [loadedFiles, setLoadedFiles] = useState<PdfFileWithUrl[]>([]);
     const [pages, setPages] = useState<PageInProcessing[]>([]);
     const [isProcessing, setIsProcessing] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    // 拡大プレビュー用のデータ管理
-    const [previewData, setPreviewData] = useState<{ file: File, pageNumber: number } | null>(null);
+    const [previewData, setPreviewData] = useState<{ url: string, pageNumber: number } | null>(null);
 
     const dragItem = useRef<number | null>(null);
     const dragOverItem = useRef<number | null>(null);
+
+    useEffect(() => {
+        return () => {
+            loadedFiles.forEach(f => URL.revokeObjectURL(f.url));
+        };
+    }, [loadedFiles]);
 
     const handleFilesAccepted = useCallback(async (acceptedFiles: File[]) => {
         setError(null);
@@ -78,10 +93,16 @@ const PdfMerger: React.FC = () => {
             try {
                 const arrayBuffer = await file.arrayBuffer();
                 const pdfDoc = await PDFDocument.load(arrayBuffer);
-                // ID生成（安全な書き方）
                 const fileId = file.name + '-' + Date.now();
+                
+                const fileUrl = URL.createObjectURL(file);
 
-                currentLoadedFiles.push({ id: fileId, file, pageCount: pdfDoc.getPageCount() });
+                currentLoadedFiles.push({ 
+                    id: fileId, 
+                    file, 
+                    pageCount: pdfDoc.getPageCount(),
+                    url: fileUrl
+                });
 
                 for (let i = 0; i < pdfDoc.getPageCount(); i++) {
                     currentPages.push({
@@ -168,6 +189,7 @@ const PdfMerger: React.FC = () => {
     };
 
     const resetState = () => {
+        loadedFiles.forEach(f => URL.revokeObjectURL(f.url));
         setLoadedFiles([]);
         setPages([]);
         setError(null);
@@ -175,13 +197,16 @@ const PdfMerger: React.FC = () => {
     }
 
     const getFileForPage = (page: PageInProcessing) => {
-        return loadedFiles.find(f => f.id === page.sourceFileId)?.file;
+        return loadedFiles.find(f => f.id === page.sourceFileId);
     }
 
     return (
         <div className="w-full">
-            <h2 className="text-2xl font-bold text-center mb-1 text-slate-800">PDFを結合するけんね</h2>
-            <p className="text-center text-slate-500 mb-6">Combine PDFs. Drag and drop to reorder pages.</p>
+            <h2 className="text-2xl font-bold text-center mb-1 text-slate-800">PDFを結合するけんね🖇️</h2>
+            <p className="text-center text-slate-500 mb-6">
+                PDFファイルをまとめて結合！<br/>
+                <span className="text-blue-600 font-semibold">ドラッグ＆ドロップでページの順番を入れ替えられるバイ！👆</span>
+            </p>
 
             {pages.length === 0 ? (
                 <div className="max-w-2xl mx-auto">
@@ -197,23 +222,26 @@ const PdfMerger: React.FC = () => {
                     <div className="bg-white p-4 rounded-lg shadow-md mb-6">
                         <div className="flex flex-wrap gap-4 justify-center" onDrop={handleDrop}>
                             {pages.map((page, index) => {
-                                const file = getFileForPage(page);
-                                return file ? (
+                                const fileData = getFileForPage(page);
+                                return fileData ? (
                                     <div
                                         key={page.id}
-                                        className="relative group cursor-grab"
+                                        className="relative group cursor-grab active:cursor-grabbing pt-2"
                                         draggable
                                         onDragStart={(e) => handleDragStart(e, index)}
                                         onDragEnter={(e) => handleDragEnter(e, index)}
                                         onDragOver={(e) => e.preventDefault()}
                                     >
-                                        <PdfPageThumbnail file={file} pageNumber={page.originalPageIndex} />
+                                        <div className="absolute top-0 left-1/2 transform -translate-x-1/2 text-slate-300">
+                                            <GripIcon className="w-6 h-6 transform rotate-90" />
+                                        </div>
+
+                                        <PdfPageThumbnail fileUrl={fileData.url} pageNumber={page.originalPageIndex} />
                                         
-                                        {/* 🔴 削除ボタン（右上）: 赤色で「危険」をアピール！ */}
-                                        <div className="absolute top-1 right-1 z-10">
+                                        <div className="absolute top-3 right-1 z-10">
                                             <button 
                                                 onClick={(e) => {
-                                                    e.stopPropagation(); // ドラッグ暴発防止
+                                                    e.stopPropagation();
                                                     removePage(page.id);
                                                 }}
                                                 className="p-1.5 bg-white text-red-500 rounded-full shadow-md opacity-0 group-hover:opacity-100 hover:bg-red-500 hover:text-white transition-all duration-200"
@@ -223,16 +251,16 @@ const PdfMerger: React.FC = () => {
                                             </button>
                                         </div>
 
-                                        {/* 🔵 プレビューボタン（中央）: ど真ん中で「見る」をアピール！ */}
-                                        <div className="absolute inset-0 flex items-center justify-center z-0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                                        <div className="absolute inset-0 top-2 flex items-center justify-center z-0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                                              <div className="pointer-events-auto">
                                                 <button 
                                                     onClick={(e) => {
                                                         e.stopPropagation();
-                                                        setPreviewData({ file, pageNumber: page.originalPageIndex });
+                                                        setPreviewData({ url: fileData.url, pageNumber: page.originalPageIndex });
                                                     }}
                                                     className="p-3 bg-blue-500 bg-opacity-90 text-white rounded-full shadow-lg hover:bg-blue-600 hover:scale-110 transition-all duration-200"
                                                     title="拡大して確認"
+                                                    onMouseDown={(e) => e.stopPropagation()}
                                                 >
                                                     <EyeIcon className="w-8 h-8" />
                                                 </button>
@@ -286,7 +314,7 @@ const PdfMerger: React.FC = () => {
                         </button>
                         
                         <div className="flex justify-center">
-                            <Document file={previewData.file} options={pdfOptions}>
+                            <Document file={previewData.url} options={pdfOptions}>
                                 <Page 
                                     pageNumber={previewData.pageNumber} 
                                     width={600} 
